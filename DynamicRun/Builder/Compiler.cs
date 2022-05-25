@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -11,36 +12,29 @@ namespace DynamicRun.Builder
 {
     internal class Compiler
     {
+        public const string HeaderCodePath = @"C:\Code\DynamicRun\Sources\header.txt";
+
         public byte[] Compile(string filepath)
         {
-            Console.WriteLine($"Starting compilation of: '{filepath}'");
+            var headerCode = File.ReadAllText(HeaderCodePath);
+            var sourceCode = headerCode + File.ReadAllText(filepath);
 
-            var sourceCode = File.ReadAllText(filepath);
+            using var peStream = new MemoryStream();
+            var result = GenerateCode(sourceCode).Emit(peStream);
 
-            using (var peStream = new MemoryStream())
+            if (!result.Success)
             {
-                var result = GenerateCode(sourceCode).Emit(peStream);
+                var failures = result.Diagnostics.Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error).ToList();
 
-                if (!result.Success)
-                {
-                    Console.WriteLine("Compilation done with error.");
+                var errorBuilder = new StringBuilder();
+                failures.ForEach(diagnostic => errorBuilder.AppendLine($"{diagnostic.Id}: {diagnostic.GetMessage()}"));
 
-                    var failures = result.Diagnostics.Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
-
-                    foreach (var diagnostic in failures)
-                    {
-                        Console.Error.WriteLine("{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
-                    }
-
-                    return null;
-                }
-
-                Console.WriteLine("Compilation done without any error.");
-
-                peStream.Seek(0, SeekOrigin.Begin);
-
-                return peStream.ToArray();
+                throw new InvalidOperationException($"Compilation failed with the following errors: {errorBuilder}");
             }
+
+            peStream.Seek(0, SeekOrigin.Begin);
+
+            return peStream.ToArray();
         }
 
         private static CSharpCompilation GenerateCode(string sourceCode)
@@ -53,13 +47,14 @@ namespace DynamicRun.Builder
             var references = new List<MetadataReference>
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)
+                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location), 
+                MetadataReference.CreateFromFile(typeof(Opportunity).Assembly.Location)
             };
             
             Assembly.GetEntryAssembly()?.GetReferencedAssemblies().ToList()
                 .ForEach(a => references.Add(MetadataReference.CreateFromFile(Assembly.Load(a).Location)));
 
-            return CSharpCompilation.Create("Hello.dll",
+            return CSharpCompilation.Create("matching.dll",
                 new[] { parsedSyntaxTree }, 
                 references: references, 
                 options: new CSharpCompilationOptions(OutputKind.ConsoleApplication, 

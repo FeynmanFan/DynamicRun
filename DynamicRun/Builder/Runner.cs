@@ -6,7 +6,7 @@ namespace DynamicRun.Builder
 {
     internal class Runner
     {
-        public void Execute(byte[] compiledAssembly, string[] args)
+        public static void Execute(byte[] compiledAssembly, string[] args)
         {
             var assemblyLoadContextWeakRef = LoadAndExecute(compiledAssembly, args);
 
@@ -16,7 +16,10 @@ namespace DynamicRun.Builder
                 GC.WaitForPendingFinalizers();
             }
 
-            Console.WriteLine(assemblyLoadContextWeakRef.IsAlive ? "Unloading failed!" : "Unloading success!");
+            if (assemblyLoadContextWeakRef.IsAlive)
+            {
+                throw new InvalidOperationException("Unloading failed");
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -30,9 +33,7 @@ namespace DynamicRun.Builder
 
                 var entry = assembly.EntryPoint;
 
-                _ = entry != null && entry.GetParameters().Length > 0
-                    ? entry.Invoke(null, new object[] {args})
-                    : entry.Invoke(null, null);
+                entry.Invoke(null, new object[] { args });
 
                 assemblyLoadContext.Unload();
 
