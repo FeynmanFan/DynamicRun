@@ -1,7 +1,5 @@
 # DynamicRun
 
-Dynamically run code using .NET (Core 3.0, Core 3.1, 5 and 6) Roslyn and AssemblyLoadContext
+Dynamically match recruiting candidates with opportunities using user code.
 
-You can read about it on my blog "[Dynamically compile and run code using .NET Core 3.0](https://laurentkempe.com/2019/02/18/dynamically-compile-and-run-code-using-dotNET-Core-3.0/)"
-
-![.NET Core 3.0 preview 1, Roslyn and AssemblyLoadContext](https://raw.githubusercontent.com/laurentkempe/DynamicRun/master/doc/screenshot.png)
+This is a fork of Laurent Kempe's original Dynamic Run project - you can read about it the on his blog "[Dynamically compile and run code using .NET Core 3.0](https://laurentkempe.com/2019/02/18/dynamically-compile-and-run-code-using-dotNET-Core-3.0/)"
